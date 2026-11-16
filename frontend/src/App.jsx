@@ -13,7 +13,7 @@ function App() {
 
   const [journalEntries, setJournalEntries] = useState([]);
   const [messages, setMessages] = useState([
-    { role: 'bot', text: "Welcome! Enter a transaction manually with an amount, or upload a CSV/Excel file to begin." }
+    { role: 'bot', text: "Welcome to NamiBooks AI. Enter a transaction manually, or upload a CSV/Excel file to begin." }
   ]);
 
   const handleSend = async () => {
@@ -132,7 +132,7 @@ function App() {
     <div className="app-container">
       
       <div className="left-panel">
-        <h2>AI Assistant</h2>
+        <h2>Chat Assistant</h2>
         
         <div className="upload-section">
           <input type="file" accept=".csv, .xlsx" ref={fileInputRef} style={{display: 'none'}} onChange={handleFileUpload} />
@@ -149,8 +149,20 @@ function App() {
         </div>
 
         <div className="input-area">
-          <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Transaction..." style={{ flex: 2 }} />
-          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="N$" style={{ flex: 1 }} />
+          <input 
+            type="text" 
+            value={input} 
+            onChange={(e) => setInput(e.target.value)} 
+            placeholder="Describe transaction..." 
+            style={{ flex: 3, minWidth: "0" }} 
+          />
+          <input 
+            type="number" 
+            value={amount} 
+            onChange={(e) => setAmount(e.target.value)} 
+            placeholder="N$" 
+            style={{ flex: 1, minWidth: "60px" }} 
+          />
           <button onClick={handleSend} disabled={loading}>Post</button>
         </div>
       </div>
@@ -173,7 +185,12 @@ function App() {
         <div className="journal-header">
           <h2>General Journal</h2>
           <button className="download-btn" onClick={downloadLedger} disabled={journalEntries.length === 0}>
-            ⬇️ Download Ledger
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download Ledger
           </button>
         </div>
 
