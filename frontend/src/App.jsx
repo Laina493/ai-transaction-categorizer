@@ -13,7 +13,7 @@ function App() {
 
   const [journalEntries, setJournalEntries] = useState([]);
   const [messages, setMessages] = useState([
-    { role: 'bot', text: "Welcome to NamiBooks AI. Enter a transaction manually, or upload a CSV/Excel file to begin." }
+    { role: 'bot', text: "Welcome to NamiBooks. Enter a transaction manually, or upload a CSV/Excel file to begin." }
   ]);
 
   // --- MANUAL TRANSACTION (CHAT) ---
@@ -89,7 +89,7 @@ function App() {
 
       data.results.forEach((item) => {
         if (item.category) {
-          // 1. CLEAN UP THE MESSY DESCRIPTION
+          // 1. Cleaning of data
           let cleanDesc = item.input;
           
           if (cleanDesc.includes('|')) {
@@ -211,7 +211,7 @@ function App() {
       
       {/* LEFT PANEL */}
       <div className="left-panel">
-        <h2>Chat Assistant</h2>
+        <h2>Assistant</h2>
         
         <div className="upload-section">
           <input type="file" accept=".csv, .xlsx" ref={fileInputRef} style={{display: 'none'}} onChange={handleFileUpload} />
