@@ -139,10 +139,16 @@ async def upload_file(file: UploadFile = File(...)) -> dict[str, Any]:
                 except:
                     pass
 
+            # Extract the date if it exists in the CSV
+            date_val = ""
+            if "date" in df.columns:
+                date_val = str(row["date"])
+
             result = categorize(desc)
             results.append({
                 "input": desc,
                 "amount": amount_val,
+                "date": date_val, 
                 "category": result["category"],
                 "source": result["source"],
                 "confidence": round(result["confidence"], 4),
