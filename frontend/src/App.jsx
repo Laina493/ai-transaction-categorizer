@@ -1,6 +1,32 @@
 import { useState, useRef, Fragment } from 'react';
 import './App.css';
 
+// Safety net: removes any time portion from a date string (e.g. "2020-03-01 00:00:00" -> "2020-03-01")
+const stripTime = (d) => (d ? String(d).split(' ')[0].split('T')[0] : d);
+
+// Categories that are normally DEBITED when money leaves the bank
+const DEBIT_NORMAL = ["Expenses", "Assets", "Drawings"];
+
+// Builds the two journal lines for a transaction.
+// Positive amount  -> normal direction for the category.
+// Negative amount  -> reversal (refund, repayment, reversed receipt): both sides flip.
+const buildLines = (category, signedAmount) => {
+  const value = Number(signedAmount) || 0;
+  const amt = Math.abs(value);
+  const isReversal = value < 0;
+  const categoryIsDebited = DEBIT_NORMAL.includes(category) !== isReversal;
+
+  return categoryIsDebited
+    ? [
+        { account: category, debit: amt, credit: 0 },
+        { account: "Bank", debit: 0, credit: amt }
+      ]
+    : [
+        { account: "Bank", debit: amt, credit: 0 },
+        { account: category, debit: 0, credit: amt }
+      ];
+};
+
 function App() {
   const [input, setInput] = useState('');
   const [amount, setAmount] = useState('');
@@ -41,10 +67,15 @@ function App() {
           [data.category]: [...prev[data.category], `${userText} (N$${userAmount})`]
         }));
         
-        if (data.journal_entry) {
-          const entryWithDate = { ...data.journal_entry, date: new Date().toLocaleDateString('en-GB') };
-          setJournalEntries(prev => [...prev, entryWithDate]);
-        }
+        // Build the entry here so negative amounts (reversals) are handled correctly
+        const entry = {
+          description: userText,
+          amount: userAmount,
+          date: new Date().toLocaleDateString('en-GB'),
+          lines: buildLines(data.category, userAmount)
+        };
+        setJournalEntries(prev => [...prev, entry]);
+
         setMessages(prev => [...prev, { role: 'bot', text: `Categorised as ${data.category}. Ledger updated.` }]);
       } else {
         // SHORTENED MANUAL CHAT MESSAGE
@@ -105,15 +136,12 @@ function App() {
           const displayStr = `${cleanDesc} (N$${item.amount || 0})`;
           newCats[item.category].push(displayStr);
           
-          // 3. Generate the journal entry using the CLEAN description and REAL date
+          // 3. Generate the journal entry using the CLEAN description and REAL date (time removed)
           newEntries.push({
             description: cleanDesc, 
             amount: item.amount || 0,
-            date: item.date || new Date().toLocaleDateString('en-GB'), 
-            lines: [
-              { account: ["Expenses","Assets","Drawings"].includes(item.category) ? item.category : "Bank", debit: item.amount || 0, credit: 0 },
-              { account: ["Income","Liabilities","Equity"].includes(item.category) ? item.category : "Bank", debit: 0, credit: item.amount || 0 }
-            ]
+            date: stripTime(item.date) || new Date().toLocaleDateString('en-GB'), 
+            lines: buildLines(item.category, item.amount)
           });
         } else {
           // 4. SHORTENED BATCH UPLOAD MESSAGE
@@ -123,7 +151,7 @@ function App() {
             needsReview: true,
             originalText: item.input,
             amount: item.amount || 0,
-            date: item.date || new Date().toLocaleDateString('en-GB')
+            date: stripTime(item.date) || new Date().toLocaleDateString('en-GB')
           });
         }
       });
@@ -160,10 +188,7 @@ function App() {
       description: originalText,
       amount: messageToResolve.amount || 0,
       date: messageToResolve.date || new Date().toLocaleDateString('en-GB'),
-      lines: [
-        { account: ["Expenses","Assets","Drawings"].includes(category) ? category : "Bank", debit: messageToResolve.amount || 0, credit: 0 },
-        { account: ["Income","Liabilities","Equity"].includes(category) ? category : "Bank", debit: 0, credit: messageToResolve.amount || 0 }
-      ]
+      lines: buildLines(category, messageToResolve.amount)
     }]);
 
     // 3. Update the chat message so the yellow warning goes away
@@ -181,17 +206,19 @@ function App() {
   const downloadLedger = () => {
     if (journalEntries.length === 0) return;
     
-    let csvContent = "Date, Description, Account, Debit (N$), Credit (N$)\n";
+    let csvContent = "Date,Description,Account,Debit (N$),Credit (N$)\n";
 
     journalEntries.forEach(entry => {
       const txDate = entry.date || new Date().toLocaleDateString('en-GB');
 
       entry.lines.forEach((line, index) => {
-        const desc = index === 0 ? `"${entry.description}"` : "";
+        const date = index === 0 ? txDate : "";
+        // Wrap in quotes and escape any quotes inside the description
+        const desc = index === 0 ? `"${String(entry.description).replace(/"/g, '""')}"` : "";
         const debitVal = line.debit > 0 ? line.debit.toFixed(2) : "0.00";
         const creditVal = line.credit > 0 ? line.credit.toFixed(2) : "0.00";
         
-        csvContent += `'${txDate}, ${desc}, ${line.account}, ${debitVal}, ${creditVal}\n`;
+        csvContent += `${date},${desc},${line.account},${debitVal},${creditVal}\n`;
       });
     });
 

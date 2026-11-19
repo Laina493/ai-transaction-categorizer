@@ -139,10 +139,18 @@ async def upload_file(file: UploadFile = File(...)) -> dict[str, Any]:
                 except:
                     pass
 
-            # Extract the date if it exists in the CSV
+            # Extract the date if it exists in the file
             date_val = ""
             if "date" in df.columns:
-                date_val = str(row["date"])
+                raw_date = row["date"]
+                if pd.isna(raw_date):
+                    date_val = ""
+                elif isinstance(raw_date, pd.Timestamp):
+                    # Excel dates arrive as Timestamps; keep the date only, drop the time
+                    date_val = raw_date.strftime("%Y-%m-%d")
+                else:
+                    # CSV dates are already plain text
+                    date_val = str(raw_date).strip()
 
             result = categorize(desc)
             results.append({
